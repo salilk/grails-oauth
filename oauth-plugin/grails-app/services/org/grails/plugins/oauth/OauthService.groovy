@@ -144,6 +144,8 @@ class OauthService implements InitializingBean {
             if (value?.scope) {
                 log?.debug "- Scope: " + value?.scope
 
+//                requestTokenUrl = requestTokenUrl + "?xoauth_displayname=localhost&scope=" + URLEncoder.encode(value?.scope, "utf-8")
+//                &oauth_callback=http://localhost:8080/rainmaker/oauth/callback
                 requestTokenUrl = requestTokenUrl + "?scope=" + URLEncoder.encode(value?.scope, "utf-8")
             }
 
@@ -215,13 +217,13 @@ class OauthService implements InitializingBean {
      * @param consumerName the consumer to fetch request token from.
      * @return A map containing the token key, secret and authorisation URL.
      */
-    def fetchRequestToken(final def consumerName) {
+    def fetchRequestToken(final def consumerName, Map providerValuesMap = null) {
         log.debug "Fetching request token for ${consumerName}"
 
         try {
             // Get consumer and provider
             final OAuthConsumer consumer = getConsumer(consumerName)
-            final OAuthProvider provider = getProvider(consumerName)
+            OAuthProvider provider = getProvider(consumerName, providerValuesMap)
 
             // Retrieve request token
             final def authorisationURL = provider?.retrieveRequestToken(consumer, callback)
@@ -641,9 +643,16 @@ class OauthService implements InitializingBean {
      * @throws OauthServiceException
      *      If {@code providerName} does not represent an existing provider.
      */
-    private def getProvider(final String providerName) {
+    private def getProvider(final String providerName, Map providerValuesMap=null) {
         // Get values
-        final def providerValues = providers[providerName]
+        def providerValues = providers[providerName]
+
+        if(providerValuesMap){
+            providerValues = providerValues ?: [:]
+            if(providerValuesMap.requestTokenUrl) providerValues.requestTokenUrl = providerValuesMap.requestTokenUrl
+            if(providerValuesMap.accessTokenUrl) providerValues.accessTokenUrl = providerValuesMap.accessTokenUrl
+            if(providerValuesMap.authUrl) providerValues.authUrl = providerValuesMap.authUrl
+        }
 
         // Validate
         if (!providerValues) {
@@ -652,7 +661,7 @@ class OauthService implements InitializingBean {
 
         // Initialise new provider
         return new CommonsHttpOAuthProvider(providerValues.requestTokenUrl,
-            providerValues.accessTokenUrl, providerValues.authUrl, httpClient)
+                providerValues.accessTokenUrl, providerValues.authUrl, httpClient)
     }
 
     /**

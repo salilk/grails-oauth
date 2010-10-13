@@ -35,6 +35,11 @@ class OauthController {
         final def errorAction = params?.error_action ?: session?.cbparams?.error_action
         final def errorId = params?.error_id ?: session?.cbparams?.error_id
 
+        def providerValues = [:]
+        providerValues.requestTokenUrl = params.requestTokenUrl?: null
+        providerValues.accessTokenUrl = params.accessTokenUrl?: null
+        providerValues.authUrl = params.authUrl?: null
+
         try {
             /*
              * Some services like FireEagle don't retain callback and params.
@@ -44,11 +49,12 @@ class OauthController {
             params?.remove('action')
             session.cbparams = params
 
-            def token = oauthService?.fetchRequestToken(consumerName)
+            def token = oauthService?.fetchRequestToken(consumerName, providerValues)
+
             session.oauthToken = token
 
             log.debug "Stored token to session: ${session.oauthToken}"
-            def redir = token.authUrl
+            def redir = token?.authUrl
 
             log.debug "Going to redirect to auth url: $redir"
             redirect(url: redir)
